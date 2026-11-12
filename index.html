@@ -6,7 +6,7 @@
   <script src="https://unpkg.com/html5-qrcode"></script>
   <style>
     body { font-family: sans-serif; padding: 15px; max-width: 500px; margin: auto; }
-    #reader { width: 100%; margin-bottom: 15px; }
+    #reader { width: 100%; margin-bottom: 15px; border-radius: 8px; overflow: hidden; }
     .item-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #ddd; }
     input[type="number"] { width: 65px; padding: 8px; font-size: 16px; }
     input[type="text"], button { width: 100%; padding: 12px; margin-top: 10px; font-size: 16px; box-sizing: border-box; }
@@ -71,7 +71,7 @@
       });
     }
 
-    // 3. Send Batch to Google Sheets (Using text/plain avoids CORS preflight blocks)
+    // 3. Send Batch to Google Sheets
     function sendData() {
       const name = document.getElementById('staffName').value.trim();
       const items = Object.values(cart);
@@ -106,9 +106,16 @@
       });
     }
 
-    // Start Camera
-    const scanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 220 });
-    scanner.render(onScanSuccess);
+    // 4. Start Rear-Facing Camera Automatically
+    const html5QrCode = new Html5Qrcode("reader");
+    html5QrCode.start(
+      { facingMode: "environment" }, // Forces the back camera
+      { fps: 10, qrbox: { width: 220, height: 220 } },
+      onScanSuccess
+    ).catch(err => {
+      document.getElementById('status').innerText = 'Camera error: ' + err;
+      console.error(err);
+    });
   </script>
 </body>
 </html>
