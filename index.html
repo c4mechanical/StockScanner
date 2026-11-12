@@ -43,10 +43,18 @@
     // PASTE YOUR GOOGLE APPS SCRIPT WEB APP URL BELOW:
     const API_URL = 'https://script.google.com/macros/s/AKfycbzfJfjlCto9z_XhzUABdDY16_90mdjhXPSJBnARoQh4IjauruEy4_d5dyj0hSlvoNK8uw/exec';
 
+    // Map short URL codes (and Sheet tab names) to full display names
+    const siteNames = {
+      'Site-A': 'Middlesex House, London',
+      'Site-B': 'Carlton House Terrace, London',
+      'Site-C': 'The Smith Centre, Henley'
+    };
+
     // Read ?site=SheetName from the QR code URL
     const urlParams = new URLSearchParams(window.location.search);
     const currentSite = urlParams.get('site') || 'Log';
-    document.getElementById('siteBadge').innerText = 'Location: ' + currentSite;
+    const displaySiteName = siteNames[currentSite] || currentSite;
+    document.getElementById('siteBadge').innerText = 'Location: ' + displaySiteName;
 
     let inventory = {};
     let cart = {};
