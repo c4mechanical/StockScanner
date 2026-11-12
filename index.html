@@ -33,15 +33,25 @@
     let lastScanTime = 0;
 
     // 1. Fetch Inventory Map from Google Sheets on page load
-    fetch(API_URL)
-      .then(res => res.json())
-      .then(data => {
-        inventory = data;
-        document.getElementById('status').innerText = 'Ready to scan.';
+    fetch(API_URL, {
+      method: 'GET',
+      redirect: 'follow'
+    })
+      .then(res => {
+        if (!res.ok) throw new Error('HTTP status ' + res.status);
+        return res.text(); // Read as raw text first so we can see HTML error pages if any
+      })
+      .then(text => {
+        try {
+          inventory = JSON.parse(text);
+          document.getElementById('status').innerText = 'Ready to scan.';
+        } catch (e) {
+          // If Google sent back an HTML login or error page instead of JSON, show the first 100 chars
+          document.getElementById('status').innerText = 'Google returned non-JSON: ' + text.substring(0, 100);
+        }
       })
       .catch(err => {
-        document.getElementById('status').innerText = 'Warning: Could not load item names.';
-        console.error(err);
+        document.getElementById('status').innerText = 'Fetch Error: ' + err.message;
       });
 
     // 2. Handle Camera Scans
