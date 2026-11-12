@@ -149,7 +149,7 @@
       .then(res => res.json())
       .then(result => {
         if (result.status === 'success') {
-          alert('Stock logged to ' + currentSite + '!');
+          alert('Stock logged to ' + displaySiteName + '!');
           cart = {};
           renderCart();
         } else {
