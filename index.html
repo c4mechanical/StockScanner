@@ -6,6 +6,8 @@
   <script src="https://unpkg.com/html5-qrcode"></script>
   <style>
     body { font-family: sans-serif; padding: 15px; max-width: 500px; margin: auto; }
+    h2 { margin-bottom: 4px; }
+    #siteBadge { font-size: 16px; font-weight: bold; color: #1a73e8; margin-bottom: 14px; }
     .mode-toggle { display: flex; gap: 10px; margin-bottom: 15px; }
     .mode-btn { flex: 1; padding: 12px; font-size: 15px; font-weight: bold; border: 2px solid #ccc; border-radius: 6px; background: #f5f5f5; color: #333; cursor: pointer; }
     .mode-btn.active-remove { background: #d93025; color: white; border-color: #d93025; }
@@ -22,6 +24,7 @@
 </head>
 <body>
   <h2 id="pageTitle">Remove Stock</h2>
+  <div id="siteBadge">Location: Loading...</div>
 
   <!-- Action Mode Selector -->
   <div class="mode-toggle">
@@ -40,10 +43,15 @@
     // PASTE YOUR GOOGLE APPS SCRIPT WEB APP URL BELOW:
     const API_URL = 'https://script.google.com/macros/s/AKfycbzfJfjlCto9z_XhzUABdDY16_90mdjhXPSJBnARoQh4IjauruEy4_d5dyj0hSlvoNK8uw/exec';
 
+    // Read ?site=SheetName from the QR code URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const currentSite = urlParams.get('site') || 'Log';
+    document.getElementById('siteBadge').innerText = 'Location: ' + currentSite;
+
     let inventory = {};
     let cart = {};
     let lastScanTime = 0;
-    let currentMode = 'Removed'; // Defaults to taking stock out
+    let currentMode = 'Removed';
 
     function setMode(mode) {
       currentMode = mode;
@@ -67,19 +75,20 @@
       }
     }
 
-    // 1. Fetch Inventory Map from Google Sheets on page load
-    fetch(API_URL, { method: 'GET', redirect: 'follow' })
-      .then(res => res.json())
-      .then(data => {
-        Object.keys(data).forEach(key => {
-          inventory[key.trim().toUpperCase()] = data[key];
-        });
-        document.getElementById('status').innerText = 'Ready to scan.';
-      })
-      .catch(err => {
-        document.getElementById('status').innerText = 'Warning: Could not load item names.';
-        console.error(err);
+    // 1. Load Inventory Map via JSONP (bypasses CORS/redirect blocks)
+    window.handleInventory = function(data) {
+      Object.keys(data).forEach(key => {
+        inventory[key.trim().toUpperCase()] = data[key];
       });
+      document.getElementById('status').innerText = 'Ready to scan.';
+    };
+
+    const script = document.createElement('script');
+    script.src = API_URL + '?callback=handleInventory';
+    script.onerror = function() {
+      document.getElementById('status').innerText = 'Error: Could not load item names.';
+    };
+    document.body.appendChild(script);
 
     // 2. Handle Camera Scans
     function onScanSuccess(decodedText) {
@@ -122,12 +131,17 @@
       fetch(API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ staffName: name, action: currentMode, items: items })
+        body: JSON.stringify({
+          site: currentSite,
+          staffName: name,
+          action: currentMode,
+          items: items
+        })
       })
       .then(res => res.json())
       .then(result => {
         if (result.status === 'success') {
-          alert('Stock logged (' + currentMode + ')!');
+          alert('Stock logged to ' + currentSite + '!');
           cart = {};
           renderCart();
         } else {
@@ -140,7 +154,7 @@
       })
       .finally(() => {
         btn.disabled = false;
-        setMode(currentMode); // Restores the button text and color
+        setMode(currentMode);
       });
     }
 
