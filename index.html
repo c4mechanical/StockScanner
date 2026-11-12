@@ -120,7 +120,7 @@
       Object.values(cart).forEach(item => {
         container.innerHTML += `
           <div class="item-row">
-            <div><strong>${item.name}</strong><br><small>${item.id}</small></div>
+            <div><strong>${item.name}</strong></div>
             <input type="number" min="1" value="${item.qty}" onchange="cart['${item.id}'].qty = this.value">
           </div>`;
       });
