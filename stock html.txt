@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Site Stock Take</title>
+  <script src="https://unpkg.com/html5-qrcode"></script>
+  <style>
+    body { font-family: sans-serif; padding: 15px; max-width: 500px; margin: auto; }
+    #reader { width: 100%; margin-bottom: 15px; }
+    .item-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #ddd; }
+    input[type="number"] { width: 65px; padding: 8px; font-size: 16px; }
+    input[type="text"], button { width: 100%; padding: 12px; margin-top: 10px; font-size: 16px; box-sizing: border-box; }
+    button { background: #1a73e8; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; }
+    button:disabled { background: #ccc; }
+    #status { font-size: 14px; color: #555; margin-bottom: 10px; }
+  </style>
+</head>
+<body>
+  <h2>Stock Removal</h2>
+  <div id="status">Loading inventory list...</div>
+  <div id="reader"></div>
+  <div id="cart"></div>
+  
+  <input type="text" id="staffName" placeholder="Your Name" required>
+  <button onclick="sendData()" id="submitBtn">Submit All Items</button>
+
+  <script>
+    // PASTE YOUR GOOGLE APPS SCRIPT WEB APP URL BELOW:
+    const API_URL = 'https://script.google.com/macros/s/AKfycbxzV4VH48cCnNOV17M8PvJQYYaiz8bzYFw4QVJU4cxHv6xMSYTXL94nh_dss-M3lbzhzg/exec';
+
+    let inventory = {};
+    let cart = {};
+    let lastScanTime = 0;
+
+    // 1. Fetch Inventory Map from Google Sheets on page load
+    fetch(API_URL)
+      .then(res => res.json())
+      .then(data => {
+        inventory = data;
+        document.getElementById('status').innerText = 'Ready to scan.';
+      })
+      .catch(err => {
+        document.getElementById('status').innerText = 'Warning: Could not load item names.';
+        console.error(err);
+      });
+
+    // 2. Handle Camera Scans
+    function onScanSuccess(decodedText) {
+      const now = Date.now();
+      if (now - lastScanTime < 1500) return; // 1.5s cooldown
+      lastScanTime = now;
+
+      const id = decodedText.trim();
+      if (cart[id]) {
+        cart[id].qty += 1;
+      } else {
+        cart[id] = { id: id, name: inventory[id] || 'Unknown Item', qty: 1 };
+      }
+      renderCart();
+    }
+
+    function renderCart() {
+      const container = document.getElementById('cart');
+      container.innerHTML = '';
+      Object.values(cart).forEach(item => {
+        container.innerHTML += `
+          <div class="item-row">
+            <div><strong>${item.name}</strong><br><small>${item.id}</small></div>
+            <input type="number" min="1" value="${item.qty}" onchange="cart['${item.id}'].qty = this.value">
+          </div>`;
+      });
+    }
+
+    // 3. Send Batch to Google Sheets (Using text/plain avoids CORS preflight blocks)
+    function sendData() {
+      const name = document.getElementById('staffName').value.trim();
+      const items = Object.values(cart);
+      if (!name || items.length === 0) return alert('Enter your name and scan at least one item.');
+      
+      const btn = document.getElementById('submitBtn');
+      btn.disabled = true;
+      btn.innerText = 'Submitting...';
+
+      fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ staffName: name, items: items })
+      })
+      .then(res => res.json())
+      .then(result => {
+        if (result.status === 'success') {
+          alert('Stock logged successfully!');
+          cart = {};
+          renderCart();
+        } else {
+          alert('Error saving data: ' + result.message);
+        }
+      })
+      .catch(err => {
+        alert('Network error. Please try again.');
+        console.error(err);
+      })
+      .finally(() => {
+        btn.disabled = false;
+        btn.innerText = 'Submit All Items';
+      });
+    }
+
+    // Start Camera
+    const scanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 220 });
+    scanner.render(onScanSuccess);
+  </script>
+</body>
+</html>
