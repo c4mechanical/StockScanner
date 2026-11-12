@@ -5,6 +5,8 @@
   <title>Site Stock Take</title>
   <script src="https://unpkg.com/html5-qrcode"></script>
   <style>
+    .item-info { display: flex; align-items: center; gap: 10px; }
+    .remove-btn { background: #fce8e6; color: #d93025; border: 1px solid #f5c6cb; border-radius: 6px; padding: 8px 12px; font-size: 15px; font-weight: bold; cursor: pointer; width: auto; margin-top: 0; }
     body { font-family: sans-serif; padding: 15px; max-width: 500px; margin: auto; }
     h2 { margin-bottom: 4px; }
     #siteBadge { font-size: 16px; font-weight: bold; color: #1a73e8; margin-bottom: 14px; }
@@ -114,13 +116,21 @@
       renderCart();
     }
 
+   function removeItem(id) {
+      delete cart[id];
+      renderCart();
+    }
+
     function renderCart() {
       const container = document.getElementById('cart');
       container.innerHTML = '';
       Object.values(cart).forEach(item => {
         container.innerHTML += `
           <div class="item-row">
-            <div><strong>${item.name}</strong></div>
+            <div class="item-info">
+              <button type="button" class="remove-btn" onclick="removeItem('${item.id}')" title="Remove item">✕</button>
+              <strong>${item.name}</strong>
+            </div>
             <input type="number" min="1" value="${item.qty}" onchange="cart['${item.id}'].qty = this.value">
           </div>`;
       });
